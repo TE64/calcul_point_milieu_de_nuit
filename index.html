@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur astronomique</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .chart-container {
+            margin-top: 30px;
+            height: 400px;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .export-btn {
+            margin-top: 15px;
+            background-color: #27ae60;
+        }
+        .export-btn:hover {
+            background-color: #219955;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculateur de lever/coucher de soleil et point milieu</h1>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="latitude">Latitude:</label>
+                <input type="number" id="latitude" step="0.000001" placeholder="Ex: 48.8566" value="48.8566">
+            </div>
+            <div class="form-group">
+                <label for="longitude">Longitude:</label>
+                <input type="number" id="longitude" step="0.000001" placeholder="Ex: 2.3522" value="2.3522">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="month">Mois:</label>
+                <select id="month">
+                    <option value="0">Janvier</option>
+                    <option value="1">Février</option>
+                    <option value="2">Mars</option>
+                    <option value="3">Avril</option>
+                    <option value="4">Mai</option>
+                    <option value="5">Juin</option>
+                    <option value="6">Juillet</option>
+                    <option value="7">Août</option>
+                    <option value="8">Septembre</option>
+                    <option value="9">Octobre</option>
+                    <option value="10">Novembre</option>
+                    <option value="11">Décembre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="year">Année:</label>
+                <input type="number" id="year" min="1900" max="2100" value="2025">
+            </div>
+            <div class="form-group">
+                <label for="timezone">Fuseau horaire:</label>
+                <input type="number" id="timezone" step="1" min="-12" max="14" value="1">
+            </div>
+        </div>
+        
+        <button id="calculate">Calculer</button>
+        
+        <div class="chart-container">
+            <canvas id="sunChart"></canvas>
+        </div>
+        
+        <div class="results">
+            <h2>Résultats</h2>
+            <div id="tableContainer">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Jour</th>
+                            <th>Lever du soleil</th>
+                            <th>Coucher du soleil</th>
+                            <th>Point milieu</th>
+                            <th>3h avant PM</th>
+                            <th>3h après PM</th>
+                            <th>Durée nuit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <!-- Les résultats seront insérés ici -->
+                    </tbody>
+                </table>
+            </div>
+            <button id="exportCsv" class="export-btn">Exporter en CSV</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialiser avec le mois actuel
+            const currentDate = new Date();
+            document.getElementById('month').value = currentDate.getMonth();
+            document.getElementById('year').value = currentDate.getFullYear();
+            
+            // Ajouter l'événement de clic au bouton
+            document.getElementById('calculate').addEventListener('click', calculateData);
+            document.getElementById('exportCsv').addEventListener('click', exportToCsv);
+            
+            // Calculer automatiquement au chargement de la page
+            calculateData();
+        });
+        
+        let sunChart = null;
+        let calculatedData = [];
+        
+        function calculateData() {
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+            const month = parseInt(document.getElementById('month').value);
+            const year = parseInt(document.getElementById('year').value);
+            const timezone = parseInt(document.getElementById('timezone').value);
+            
+            // Vérifier les entrées
+            if (isNaN(latitude) || isNaN(longitude) || isNaN(month) || isNaN(year) || isNaN(timezone)) {
+                alert('Veuillez remplir tous les champs correctement.');
+                return;
+            }
+            
+            // Obtenir le nombre de jours dans le mois
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Tableau pour stocker les données calculées
+            calculatedData = [];
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                
+                // Calculer les heures de lever et coucher du soleil avec SunCalc
+                const sunTimes = SunCalc.getTimes(date, latitude, longitude);
+                
+                // Ajuster pour le fuseau horaire
+                const sunrise = new Date(sunTimes.sunrise);
+                const sunset = new Date(sunTimes.sunset);
+                
+                // Convertir en valeurs décimales (heures)
+                const sunriseDecimal = sunrise.getHours() + sunrise.getMinutes() / 60;
+                const sunsetDecimal = sunset.getHours() + sunset.getMinutes() / 60;
+                
+                // Calculer le point milieu de la nuit (entre coucher et lever)
+                let midpoint;
+                if (sunsetDecimal > sunriseDecimal) {
+                    // Cas rare: lever avant coucher le même jour
+                    midpoint = (sunsetDecimal + sunriseDecimal + 24) / 2;
+                    if (midpoint >= 24) {
+                        midpoint -= 24;
+                    }
+                } else {
+                    // Cas typique: coucher aujourd'hui, lever demain
+                    midpoint = (sunsetDecimal + sunriseDecimal) / 2;
+                }
+                
+                // Calculer 3h avant et après le point milieu
+                const beforeMidpoint = (midpoint - 3 + 24) % 24;
+                const afterMidpoint = (midpoint + 3) % 24;
+                
+                // Conversion pour l'affichage
+                const sunriseConverted = sunriseDecimal <= 12 ? sunriseDecimal : sunriseDecimal - 24;
+                const sunsetConverted = sunsetDecimal <= 12 ? sunsetDecimal : sunsetDecimal - 24;
+                const midpointConverted = midpoint <= 12 ? midpoint : midpoint - 24;
+                const beforeMidpointConverted = beforeMidpoint <= 12 ? beforeMidpoint : beforeMidpoint - 24;
+                const afterMidpointConverted = afterMidpoint <= 12 ? afterMidpoint : afterMidpoint - 24;
+                
+                // Calculer durée de la nuit
+                let nightDuration;
+                if (sunriseDecimal > sunsetDecimal) {
+                    nightDuration = sunriseDecimal - sunsetDecimal;
+                } else {
+                    nightDuration = sunriseDecimal + 24 - sunsetDecimal;
+                }
+                
+                // Ajouter les données calculées
+                calculatedData.push({
+                    day: day,
+                    sunrise: sunriseDecimal,
+                    sunset: sunsetDecimal,
+                    sunriseConverted: sunriseConverted,
+                    sunsetConverted: sunsetConverted,
+                    midpoint: midpoint,
+                    midpointConverted: midpointConverted,
+                    beforeMidpoint: beforeMidpoint,
+                    afterMidpoint: afterMidpoint,
+                    beforeMidpointConverted: beforeMidpointConverted,
+                    afterMidpointConverted: afterMidpointConverted,
+                    nightDuration: nightDuration,
+                    timezone: timezone
+                });
+            }
+            
+            // Mettre à jour le tableau des résultats
+            updateResultsTable();
+            
+            // Mettre à jour le graphique
+            updateChart();
+        }
+        
+        function formatHour(decimal) {
+            const hours = Math.floor(decimal);
+            const minutes = Math.round((decimal - hours) * 60);
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
+        
+        function updateResultsTable() {
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            
+            calculatedData.forEach(data => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${data.day}</td>
+                    <td>${formatHour(data.sunrise)}</td>
+                    <td>${formatHour(data.sunset)}</td>
+                    <td>${formatHour(data.midpoint)}</td>
+                    <td>${formatHour(data.beforeMidpoint)}</td>
+                    <td>${formatHour(data.afterMidpoint)}</td>
+                    <td>${formatHour(data.nightDuration)}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function updateChart() {
+            const ctx = document.getElementById('sunChart').getContext('2d');
+            
+            // Préparer les données pour le graphique
+            const labels = calculatedData.map(data => data.day);
+            const sunriseData = calculatedData.map(data => data.sunriseConverted);
+            const sunsetData = calculatedData.map(data => data.sunsetConverted);
+            const midpointData = calculatedData.map(data => data.midpointConverted);
+            const beforeMidpointData = calculatedData.map(data => data.beforeMidpointConverted);
+            const afterMidpointData = calculatedData.map(data => data.afterMidpointConverted);
+            
+            // Détruire le graphique existant s'il y en a un
+            if (sunChart) {
+                sunChart.destroy();
+            }
+            
+            // Créer un nouveau graphique
+            sunChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Lever du soleil',
+                            data: sunriseData,
+                            borderColor: '#f1c40f',
+                            backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Coucher du soleil',
+                            data: sunsetData,
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Point milieu',
+                            data: midpointData,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3
+                        },
+                        {
+                            label: '3h avant PM',
+                            data: beforeMidpointData,
+                            borderColor: '#9b59b6',
+                            backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3
+                        },
+                        {
+                            label: '3h après PM',
+                            data: afterMidpointData,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Jour du mois'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Heure (format 24h)'
+                            },
+                            min: -12,
+                            max: 12
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Heures de lever/coucher du soleil et point milieu de la nuit'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    return `${label}: ${formatHour(value < 0 ? value + 24 : value)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function exportToCsv() {
+            if (calculatedData.length === 0) {
+                alert('Veuillez d\'abord calculer les données.');
+                return;
+            }
+            
+            // Préparer les en-têtes CSV
+            let csvContent = 'Jour,Lever du soleil,Coucher du soleil,Point milieu,3h avant PM,3h après PM,Durée nuit\n';
+            
+            // Ajouter les données
+            calculatedData.forEach(data => {
+                csvContent += `${data.day},${formatHour(data.sunrise)},${formatHour(data.sunset)},${formatHour(data.midpoint)},${formatHour(data.beforeMidpoint)},${formatHour(data.afterMidpoint)},${formatHour(data.nightDuration)}\n`;
+            });
+            
+            // Créer un élément de lien pour télécharger
+            const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            
+            // Obtenir le nom du mois pour le nom du fichier
+            const monthNames = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
+            const month = parseInt(document.getElementById('month').value);
+            const year = document.getElementById('year').value;
+            
+            link.setAttribute('download', `donnees_soleil_${monthNames[month]}_${year}.csv`);
+            document.body.appendChild(link);
+            
+            // Télécharger le fichier CSV
+            link.click();
+            
+            // Nettoyer
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
