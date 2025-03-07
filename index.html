@@ -229,8 +229,8 @@
                             <th>Point milieu</th>
                             <th>Plage soir</th>
                             <th>Plage matin</th>
-                            <th>Durée (de coucher à -3h du pm))</th>
-                            <th>Durée (de +3H du PM au lever)</th>
+                            <th>Durée (de coucher à plage Soir))</th>
+                            <th>Durée (de plage Matin au lever)</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
@@ -505,8 +505,8 @@
                     <th>Point milieu</th>
                     <th>Plage soir</th>
                     <th>Plage matin</th>
-                    <th>Durée (de coucher à -3h du pm))</th>
-                    <th>Durée (de +3H du PM au lever)</th>
+                    <th>Durée (de coucher à plage Soir)</th>
+                    <th>Durée (de plage Matin au lever)</th>
                 `;
             } else {
                 thead.innerHTML = `
@@ -516,8 +516,8 @@
                     <th>Point milieu</th>
                     <th>Plage soir</th>
                     <th>Plage matin</th>
-                    <th>Durée (de coucher à -3h du pm))</th>
-                    <th>Durée (de +3H du PM au lever)</th>
+                    <th>Durée (de coucher à plage Soir)</th>
+                    <th>Durée (de plage Matin au lever)</th>
                 `;
             }
             
@@ -685,14 +685,14 @@
             let csvContent = '';
             
             if (currentView === 'month') {
-                csvContent = 'Jour,Lever du soleil,Coucher du soleil,Point milieu,Plage soir,Plage matin,Durée (de coucher à -3h du pm)),Durée (de +3H du PM au lever),Durée nuit\n';
+                csvContent = 'Jour,Lever du soleil,Coucher du soleil,Point milieu,Plage soir,Plage matin,Durée (de coucher à plage Soir),Durée (de plage Matin au lever),Durée nuit\n';
                 
                 // Ajouter les données mensuelles
                 calculatedData.forEach(data => {
                     csvContent += `${data.day},${formatHour(data.sunrise)},${formatHour(data.sunset)},${formatHour(data.midpoint)},${formatHour(data.eveningTime)},${formatHour(data.morningTime)},${formatHour(data.eveningDuration)},${formatHour(data.morningDuration)},${formatHour(data.nightDuration)}\n`;
                 });
             } else {
-                csvContent = 'Date,Mois,Lever du soleil,Coucher du soleil,Point milieu,Plage soir,Plage matin,Durée (de coucher à -3h du pm)),Durée (de +3H du PM au lever),Durée nuit\n';
+                csvContent = 'Date,Mois,Lever du soleil,Coucher du soleil,Point milieu,Plage soir,Plage matin,Durée (de coucher à plage Soir),Durée (de plage Matin au lever),Durée nuit\n';
                 
                 // Ajouter les données annuelles
                 calculatedData.forEach(data => {
