@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif, sans-serif, sans-serif;
             max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
@@ -22,7 +22,7 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         h1 {
-            color: #2c3e50;
+            color: #46505a;
             text-align: center;
         }
         .form-group {
@@ -41,7 +41,7 @@
             box-sizing: border-box;
         }
         button {
-            background-color: #3498db;
+            background-color: #32b9c8;
             color: white;
             border: none;
             padding: 10px 15px;
@@ -51,7 +51,7 @@
             width: 100%;
         }
         button:hover {
-            background-color: #2980b9;
+            background-color: #9b3287;
         }
         .chart-container {
             margin-top: 30px;
@@ -78,10 +78,10 @@
         }
         .export-btn {
             margin-top: 15px;
-            background-color: #27ae60;
+            background-color: #32b9c8;
         }
         .export-btn:hover {
-            background-color: #219955;
+            background-color: #9b3287;
         }
         .form-row {
             display: flex;
@@ -99,18 +99,55 @@
             flex: 1;
         }
         .view-toggle .active {
-            background-color: #2c3e50;
+            background-color: #9b3287;
+        }
+        /* Styles pour les plages horaires paramétrables */
+        .custom-ranges {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+            border: 1px solid #d0e3f7;
+        }
+        .custom-ranges h3 {
+            margin-top: 0;
+            color: #32b9c8;
+        }
+        .range-inputs {
+            display: flex;
+            gap: 15px;
+        }
+        .range-inputs .form-group {
+            flex: 1;
+        }
+        .info-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
         }
         @media (max-width: 768px) {
-            .form-row {
+            .form-row, .range-inputs {
                 flex-direction: column;
             }
         }
     </style>
 </head>
 <body>
+    <img src="logo TE.png" alt="Logo de l'entreprise" style="position: absolute; top: 0; left: 0;">
+    <h1 style="text-align: center;">
     <div class="container">
         <h1>Calculateur de lever/coucher de soleil et point milieu</h1>
+        
+        <div class="form-group">
+            <label for="city">Sélectionnez une commune:</label>
+            <select id="city">
+                <option value="">-- Sélectionner --</option>
+                <option value="Paris">Paris</option>
+                <option value="Bayonne">Bayonne</option>
+                <option value="Pau">Pau</option>
+                <option value="Saint Palais">Saint Palais</option>
+            </select>
+        </div>
         
         <div class="form-row">
             <div class="form-group">
@@ -151,6 +188,24 @@
             </div>
         </div>
         
+        <!-- Ajout des plages horaires paramétrables -->
+        <div class="custom-ranges">
+            <h3>Plages horaires personnalisées</h3>
+            <p class="info-text">Définissez vos plages horaires personnalisées par rapport au point milieu de la nuit (PM). Utilisez des valeurs négatives pour avant le PM et positives pour après.</p>
+            <div class="range-inputs">
+                <div class="form-group">
+                    <label for="eveningOffset">Plage du soir (en heures par rapport au PM):</label>
+                    <input type="number" id="eveningOffset" step="0.5" value="-1" min="-12" max="0">
+                    <p class="info-text">Ex: -1 = 1 heure avant le point milieu</p>
+                </div>
+                <div class="form-group">
+                    <label for="morningOffset">Plage du matin (en heures par rapport au PM):</label>
+                    <input type="number" id="morningOffset" step="0.5" value="5" min="0" max="12">
+                    <p class="info-text">Ex: 5 = 5 heures après le point milieu</p>
+                </div>
+            </div>
+        </div>
+        
         <button id="calculate">Calculer</button>
         
         <div class="view-toggle">
@@ -172,9 +227,10 @@
                             <th>Lever du soleil</th>
                             <th>Coucher du soleil</th>
                             <th>Point milieu</th>
-                            <th>3h avant PM</th>
-                            <th>3h après PM</th>
-                            <th>Durée nuit</th>
+                            <th>Plage soir</th>
+                            <th>Plage matin</th>
+                            <th>Durée (de coucher à -3h du pm))</th>
+                            <th>Durée (de +3H du PM au lever)</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
@@ -188,6 +244,23 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Définition des coordonnées des communes
+            const cities = {
+                "Paris": { lat: 48.8566, lon: 2.3522 },
+                "Bayonne": { lat: 43.4833, lon: -1.4833 },
+                "Pau": { lat: 43.2951, lon: -0.3708 },
+                "Saint Palais": { lat: 43.3287, lon: -1.0315 }
+            };
+            
+            // Gestion du changement de commune
+            document.getElementById('city').addEventListener('change', function() {
+                const cityName = this.value;
+                if (cityName && cities[cityName]) {
+                    document.getElementById('latitude').value = cities[cityName].lat;
+                    document.getElementById('longitude').value = cities[cityName].lon;
+                }
+            });
+            
             // Initialiser avec le mois actuel
             const currentDate = new Date();
             document.getElementById('month').value = currentDate.getMonth();
@@ -234,9 +307,13 @@
             const longitude = parseFloat(document.getElementById('longitude').value);
             const year = parseInt(document.getElementById('year').value);
             const timezone = parseInt(document.getElementById('timezone').value);
+            // Récupération des offsets pour les plages horaires personnalisées
+            const eveningOffset = parseFloat(document.getElementById('eveningOffset').value);
+            const morningOffset = parseFloat(document.getElementById('morningOffset').value);
             
             // Vérifier les entrées
-            if (isNaN(latitude) || isNaN(longitude) || isNaN(year) || isNaN(timezone)) {
+            if (isNaN(latitude) || isNaN(longitude) || isNaN(year) || isNaN(timezone) || 
+                isNaN(eveningOffset) || isNaN(morningOffset)) {
                 alert('Veuillez remplir tous les champs correctement.');
                 return;
             }
@@ -257,7 +334,7 @@
                 
                 for (let day = 1; day <= daysInMonth; day++) {
                     const date = new Date(year, month, day);
-                    const dayData = calculateSunDataForDate(date, latitude, longitude, timezone);
+                    const dayData = calculateSunDataForDate(date, latitude, longitude, timezone, eveningOffset, morningOffset);
                     dayData.label = day; // Utiliser le jour comme étiquette
                     calculatedData.push(dayData);
                 }
@@ -270,7 +347,7 @@
                     for (let dayIdx = 0; dayIdx < daysToCalculate.length; dayIdx++) {
                         const day = daysToCalculate[dayIdx];
                         const date = new Date(year, month, day);
-                        const dayData = calculateSunDataForDate(date, latitude, longitude, timezone);
+                        const dayData = calculateSunDataForDate(date, latitude, longitude, timezone, eveningOffset, morningOffset);
                         
                         // Étiquette composite pour l'affichage annuel
                         const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -296,7 +373,8 @@
             updateChart(view);
         }
         
-        function calculateSunDataForDate(date, latitude, longitude, timezone) {
+        // Fonction pour calculer les données solaires
+        function calculateSunDataForDate(date, latitude, longitude, timezone, eveningOffset, morningOffset) {
             // Calculer les heures de lever et coucher du soleil avec SunCalc
             const sunTimes = SunCalc.getTimes(date, latitude, longitude);
             
@@ -321,16 +399,40 @@
                 midpoint = (sunsetDecimal + sunriseDecimal) / 2;
             }
             
-            // Calculer 3h avant et après le point milieu
-            const beforeMidpoint = (midpoint - 3 + 24) % 24;
-            const afterMidpoint = (midpoint + 3) % 24;
+            // Calculer les plages personnalisées par rapport au point milieu
+            const eveningTime = (midpoint + eveningOffset + 24) % 24;
+            const morningTime = (midpoint + morningOffset) % 24;
+            
+            // Calculer les durées
+            // 1. Durée entre le coucher du soleil et la plage du soir
+            let eveningDuration;
+            if (eveningTime > sunsetDecimal) {
+                eveningDuration = eveningTime - sunsetDecimal;
+            } else {
+                eveningDuration = eveningTime + 24 - sunsetDecimal;
+            }
+            
+            // 2. Durée entre la plage du matin et le lever du soleil
+            let morningDuration;
+            
+            // Calculer la différence d'heures entre le lever du soleil et la plage du matin
+            const diffHours = (sunriseDecimal - morningTime + 24) % 24;
+            
+            if (diffHours < 12) {
+                // Le lever du soleil est dans les 12 heures suivant la plage du matin
+                morningDuration = diffHours;
+            } else {
+                // Le lever du soleil est après la plage du matin, mais plus de 12 heures après
+                // Nous retournons une valeur négative
+                morningDuration = diffHours - 24;
+            }
             
             // Conversion pour l'affichage
             const sunriseConverted = sunriseDecimal <= 12 ? sunriseDecimal : sunriseDecimal - 24;
             const sunsetConverted = sunsetDecimal <= 12 ? sunsetDecimal : sunsetDecimal - 24;
             const midpointConverted = midpoint <= 12 ? midpoint : midpoint - 24;
-            const beforeMidpointConverted = beforeMidpoint <= 12 ? beforeMidpoint : beforeMidpoint - 24;
-            const afterMidpointConverted = afterMidpoint <= 12 ? afterMidpoint : afterMidpoint - 24;
+            const eveningTimeConverted = eveningTime <= 12 ? eveningTime : eveningTime - 24;
+            const morningTimeConverted = morningTime <= 12 ? morningTime : morningTime - 24;
             
             // Calculer durée de la nuit
             let nightDuration;
@@ -349,19 +451,44 @@
                 sunsetConverted: sunsetConverted,
                 midpoint: midpoint,
                 midpointConverted: midpointConverted,
-                beforeMidpoint: beforeMidpoint,
-                afterMidpoint: afterMidpoint,
-                beforeMidpointConverted: beforeMidpointConverted,
-                afterMidpointConverted: afterMidpointConverted,
+                eveningTime: eveningTime,
+                morningTime: morningTime,
+                eveningTimeConverted: eveningTimeConverted,
+                morningTimeConverted: morningTimeConverted,
+                eveningDuration: eveningDuration,
+                morningDuration: morningDuration,
                 nightDuration: nightDuration,
                 timezone: timezone
             };
         }
-        
+
+        // Fonction pour formater les heures, y compris les heures négatives
         function formatHour(decimal) {
-            const hours = Math.floor(decimal);
-            const minutes = Math.round((decimal - hours) * 60);
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            // Vérifier si la valeur est NaN et retourner une valeur par défaut
+            if (isNaN(decimal)) {
+                return "00:00";
+            }
+            
+            // Gérer les heures négatives
+            const isNegative = decimal < 0;
+            let absDecimal = Math.abs(decimal);
+            
+            // Calculer les heures et minutes
+            const hours = Math.floor(absDecimal);
+            // Arrondir pour éviter les problèmes de précision en virgule flottante
+            const minutes = Math.round((absDecimal - hours) * 60);
+            
+            // Ajuster en cas de minutes = 60
+            let adjustedHours = hours;
+            let adjustedMinutes = minutes;
+            
+            if (minutes === 60) {
+                adjustedHours += 1;
+                adjustedMinutes = 0;
+            }
+            
+            // Formater avec le signe négatif si nécessaire
+            return `${isNegative ? '-' : ''}${adjustedHours.toString().padStart(2, '0')}:${adjustedMinutes.toString().padStart(2, '0')}`;
         }
         
         function updateResultsTable(view) {
@@ -376,9 +503,10 @@
                     <th>Lever du soleil</th>
                     <th>Coucher du soleil</th>
                     <th>Point milieu</th>
-                    <th>3h avant PM</th>
-                    <th>3h après PM</th>
-                    <th>Durée nuit</th>
+                    <th>Plage soir</th>
+                    <th>Plage matin</th>
+                    <th>Durée (de coucher à -3h du pm))</th>
+                    <th>Durée (de +3H du PM au lever)</th>
                 `;
             } else {
                 thead.innerHTML = `
@@ -386,9 +514,10 @@
                     <th>Lever du soleil</th>
                     <th>Coucher du soleil</th>
                     <th>Point milieu</th>
-                    <th>3h avant PM</th>
-                    <th>3h après PM</th>
-                    <th>Durée nuit</th>
+                    <th>Plage soir</th>
+                    <th>Plage matin</th>
+                    <th>Durée (de coucher à -3h du pm))</th>
+                    <th>Durée (de +3H du PM au lever)</th>
                 `;
             }
             
@@ -401,9 +530,10 @@
                         <td>${formatHour(data.sunrise)}</td>
                         <td>${formatHour(data.sunset)}</td>
                         <td>${formatHour(data.midpoint)}</td>
-                        <td>${formatHour(data.beforeMidpoint)}</td>
-                        <td>${formatHour(data.afterMidpoint)}</td>
-                        <td>${formatHour(data.nightDuration)}</td>
+                        <td>${formatHour(data.eveningTime)}</td>
+                        <td>${formatHour(data.morningTime)}</td>
+                        <td>${formatHour(data.eveningDuration)}</td>
+                        <td>${formatHour(data.morningDuration)}</td>
                     `;
                 } else {
                     const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -413,9 +543,10 @@
                         <td>${formatHour(data.sunrise)}</td>
                         <td>${formatHour(data.sunset)}</td>
                         <td>${formatHour(data.midpoint)}</td>
-                        <td>${formatHour(data.beforeMidpoint)}</td>
-                        <td>${formatHour(data.afterMidpoint)}</td>
-                        <td>${formatHour(data.nightDuration)}</td>
+                        <td>${formatHour(data.eveningTime)}</td>
+                        <td>${formatHour(data.morningTime)}</td>
+                        <td>${formatHour(data.eveningDuration)}</td>
+                        <td>${formatHour(data.morningDuration)}</td>
                     `;
                 }
                 
@@ -431,8 +562,8 @@
             const sunriseData = calculatedData.map(data => data.sunriseConverted);
             const sunsetData = calculatedData.map(data => data.sunsetConverted);
             const midpointData = calculatedData.map(data => data.midpointConverted);
-            const beforeMidpointData = calculatedData.map(data => data.beforeMidpointConverted);
-            const afterMidpointData = calculatedData.map(data => data.afterMidpointConverted);
+            const eveningTimeData = calculatedData.map(data => data.eveningTimeConverted);
+            const morningTimeData = calculatedData.map(data => data.morningTimeConverted);
             
             // Détruire le graphique existant s'il y en a un
             if (sunChart) {
@@ -445,10 +576,14 @@
                 const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
                 const month = parseInt(document.getElementById('month').value);
                 const year = document.getElementById('year').value;
-                chartTitle = `Heures de lever/coucher du soleil - ${monthNames[month]} ${year}`;
+                const citySelect = document.getElementById('city');
+                const cityName = citySelect.value ? `${citySelect.options[citySelect.selectedIndex].text}` : '';
+                chartTitle = `Heures de lever/coucher du soleil - ${monthNames[month]} ${year}${cityName ? ` - ${cityName}` : ''}`;
             } else {
                 const year = document.getElementById('year').value;
-                chartTitle = `Heures de lever/coucher du soleil - Année ${year}`;
+                const citySelect = document.getElementById('city');
+                const cityName = citySelect.value ? `${citySelect.options[citySelect.selectedIndex].text}` : '';
+                chartTitle = `Heures de lever/coucher du soleil - Année ${year}${cityName ? ` - ${cityName}` : ''}`;
             }
             
             // Créer un nouveau graphique
@@ -482,20 +617,22 @@
                             tension: 0.3
                         },
                         {
-                            label: '3h avant PM',
-                            data: beforeMidpointData,
+                            label: 'Plage soir',
+                            data: eveningTimeData,
                             borderColor: '#9b59b6',
                             backgroundColor: 'rgba(155, 89, 182, 0.1)',
                             borderWidth: 2,
-                            tension: 0.3
+                            tension: 0.3,
+                            borderDash: [5, 5]
                         },
                         {
-                            label: '3h après PM',
-                            data: afterMidpointData,
+                            label: 'Plage matin',
+                            data: morningTimeData,
                             borderColor: '#2ecc71',
                             backgroundColor: 'rgba(46, 204, 113, 0.1)',
                             borderWidth: 2,
-                            tension: 0.3
+                            tension: 0.3,
+                            borderDash: [5, 5]
                         }
                     ]
                 },
@@ -537,6 +674,7 @@
             });
         }
         
+        
         function exportToCsv() {
             if (calculatedData.length === 0) {
                 alert('Veuillez d\'abord calculer les données.');
@@ -547,21 +685,21 @@
             let csvContent = '';
             
             if (currentView === 'month') {
-                csvContent = 'Jour,Lever du soleil,Coucher du soleil,Point milieu,3h avant PM,3h après PM,Durée nuit\n';
+                csvContent = 'Jour,Lever du soleil,Coucher du soleil,Point milieu,Plage soir,Plage matin,Durée (de coucher à -3h du pm)),Durée (de +3H du PM au lever),Durée nuit\n';
                 
                 // Ajouter les données mensuelles
                 calculatedData.forEach(data => {
-                    csvContent += `${data.day},${formatHour(data.sunrise)},${formatHour(data.sunset)},${formatHour(data.midpoint)},${formatHour(data.beforeMidpoint)},${formatHour(data.afterMidpoint)},${formatHour(data.nightDuration)}\n`;
+                    csvContent += `${data.day},${formatHour(data.sunrise)},${formatHour(data.sunset)},${formatHour(data.midpoint)},${formatHour(data.eveningTime)},${formatHour(data.morningTime)},${formatHour(data.eveningDuration)},${formatHour(data.morningDuration)},${formatHour(data.nightDuration)}\n`;
                 });
             } else {
-                csvContent = 'Date,Mois,Lever du soleil,Coucher du soleil,Point milieu,3h avant PM,3h après PM,Durée nuit\n';
+                csvContent = 'Date,Mois,Lever du soleil,Coucher du soleil,Point milieu,Plage soir,Plage matin,Durée (de coucher à -3h du pm)),Durée (de +3H du PM au lever),Durée nuit\n';
                 
                 // Ajouter les données annuelles
                 calculatedData.forEach(data => {
                     const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
                     const month = data.date.getMonth();
                     
-                    csvContent += `${data.day},${monthNames[month]},${formatHour(data.sunrise)},${formatHour(data.sunset)},${formatHour(data.midpoint)},${formatHour(data.beforeMidpoint)},${formatHour(data.afterMidpoint)},${formatHour(data.nightDuration)}\n`;
+                    csvContent += `${data.day},${monthNames[month]},${formatHour(data.sunrise)},${formatHour(data.sunset)},${formatHour(data.midpoint)},${formatHour(data.eveningTime)},${formatHour(data.morningTime)},${formatHour(data.eveningDuration)},${formatHour(data.morningDuration)},${formatHour(data.nightDuration)}\n`;
                 });
             }
             
